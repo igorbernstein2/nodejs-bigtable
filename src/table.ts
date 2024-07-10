@@ -799,6 +799,7 @@ Please use the format 'prezzy' or '${instance.name}/tables/prezzy'.`);
     };
 
     const makeNewRequest = () => {
+      console.log("makeNewRequest")
       // Avoid cancelling an expired timer if user
       // cancelled the stream in the middle of a retry
       retryTimer = null;
@@ -946,8 +947,22 @@ Please use the format 'prezzy' or '${instance.name}/tables/prezzy'.`);
         return false;
       };
 
+      let oldrowStreamEmit = rowStream.emit;
+      // @ts-ignore
+      rowStream.emit = function() {
+        console.log("rowStream.emit", arguments[0]);
+        // @ts-ignore
+        oldrowStreamEmit.apply(rowStream, arguments);
+      }
+      let oldRowStreamDestroy = rowStream._destroy;
+      rowStream._destroy = function() {
+        // @ts-ignore
+        oldRowStreamDestroy.apply(rowStream, arguments);
+      }
+
       rowStream
         .on('error', (error: ServiceError) => {
+          console.log("rowStream onError", error)
           rowStreamUnpipe(rowStream, userStream);
           activeRequestStream = null;
           if (IGNORED_STATUS_CODES.has(error.code)) {

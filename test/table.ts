@@ -1133,8 +1133,19 @@ describe('Bigtable/Table', () => {
           cb();
         };
 
+        // moo
         callCreateReadStream = (options: {}, verify: Function) => {
-          table.createReadStream(options).on('end', verify).resume(); // The stream starts paused unless it has a `.data()`
+          let s = table.createReadStream(options)
+              .on('data', () => console.log("callCreateReadStream.data"))
+              .on('error', () => console.log("callCreateReadStream.error"))
+              .on('end', verify);
+          let oldEmit = s.emit;
+          s.emit = function() {
+            console.log("callCreateReadStream.emit", arguments[0])
+            return oldEmit.apply(s, arguments);
+          }
+          return null;
+          //table.createReadStream(options).on('end', verify).resume(); // The stream starts paused unless it has a `.data()`
           // callback.
         };
 
@@ -1257,12 +1268,16 @@ describe('Bigtable/Table', () => {
           .resume();
       });
 
+      // moo
       it('should have a range which starts after the last read key', done => {
+        console.log("mooo")
         emitters = [
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           ((stream: any) => {
             stream.push([{key: 'a'}]);
-            stream.emit('error', makeRetryableError());
+            stream.destroy(makeRetryableError());
+            //stream.emit('error', makeRetryableError());
+
           }) as {} as EventEmitter,
           ((stream: Writable) => {
             stream.end();
@@ -1272,6 +1287,7 @@ describe('Bigtable/Table', () => {
         const fullScan = {rowKeys: [], rowRanges: [{}]};
 
         callCreateReadStream(null, () => {
+          console.log("callCreateReadStream done cb verify")
           assert.deepStrictEqual(reqOptsCalls[0].rows, fullScan);
           assert.deepStrictEqual(reqOptsCalls[1].rows, {
             rowKeys: [],
